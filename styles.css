@@ -65,3 +65,29 @@ html, body {
 #start:disabled { opacity: 0.5; cursor: progress; }
 
 #error { color: #ff7b7b; min-height: 1.5em; }
+
+#debug {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  font: 12px/1.45 ui-monospace, Menlo, monospace;
+  color: #d8ffd8;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 6px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+#rec {
+  position: fixed;
+  top: 0.75rem;
+  right: 1rem;
+  font: bold 14px ui-monospace, Menlo, monospace;
+  color: #ff3b3b;
+  z-index: 5;
+  pointer-events: none;
+}
+
+[hidden] { display: none !important; }

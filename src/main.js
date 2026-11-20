@@ -5,6 +5,7 @@ import { createPinchTracker } from './hands.js';
 import { createString, pluckString } from './strings.js';
 import { createSynth } from './synth.js';
 import { render } from './render.js';
+import { createDebug } from './debug.js';
 
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
@@ -21,7 +22,7 @@ let hands = [];
 let pinched = new Map();
 let tracker = null;
 let synth = null;
-let debug = null; // created in Task 8
+const debug = createDebug(document.getElementById('debug'));
 
 function resize() {
   const dpr = window.devicePixelRatio || 1;
@@ -31,6 +32,13 @@ function resize() {
 }
 window.addEventListener('resize', resize);
 resize();
+
+window.addEventListener('keydown', (e) => {
+  if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+  const key = e.key.toLowerCase();
+  if (key === 'd') debug.toggleOverlay();
+  else if (key === 'r') debug.toggleRecording();
+});
 
 function applyEvents(events, frame) {
   for (const e of events) {
