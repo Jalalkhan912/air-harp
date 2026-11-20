@@ -156,7 +156,8 @@ test('pluck: resting exactly on a string does not re-pluck', () => {
     [R('point', P(250, 300))],
     ...repeat(10, [R('point', P(300, 300))]),
   ], vertical);
-  assert.equal(ofType(ev, 'pluck').length, 1);
+  // Stopping inside the dead band never completes a crossing, so it may not pluck at all.
+  assert.ok(ofType(ev, 'pluck').length <= 1);
 });
 
 test('fast sweep is louder', () => {
@@ -267,4 +268,19 @@ test('engine never mutates strings', () => {
   Object.freeze(strings[0]);
   Object.freeze(strings);
   run(g, repeat(40, [R('open', P(400, 305))]), strings);
+});
+
+test('a fingertip jittering on a string plucks at most once (review: dead band)', () => {
+  const g = createGestureEngine();
+  const xs = [250];
+  for (let i = 0; i < 30; i++) xs.push(300 + (i % 2 ? 2 : -2));
+  const ev = run(g, xs.map((x) => [R('point', P(x, 300))]), vertical);
+  assert.ok(ofType(ev, 'pluck').length <= 1, `plucks: ${ofType(ev, 'pluck').length}`);
+});
+
+test('a slow crossing through the dead band still plucks once', () => {
+  const g = createGestureEngine();
+  const xs = [280, 290, 297, 300, 303, 310, 320];
+  const ev = run(g, xs.map((x) => [R('point', P(x, 300))]), vertical);
+  assert.equal(ofType(ev, 'pluck').length, 1);
 });

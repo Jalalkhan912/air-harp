@@ -8,6 +8,7 @@ export const CONFIG = {
   MIN_STRING_LENGTH: 60,
   POST_DRAW_MUTE_MS: 300,                    // no plucks right after a draw ends
   PLUCK_COOLDOWN_MS: 80,                     // per string
+  PLUCK_DEADBAND_PX: 6,                      // tip must clear the string by this much on both sides to pluck
   PLUCK_SPEED_MAX: 2.0,                      // px/ms that maps to velocity 1
   MAX_JUMP_PX: 250,                          // fingertip moves farther than this in one frame => no pluck
   DELETE_RADIUS: 40, DELETE_HOLD_MS: 1000, DELETE_GRACE_MS: 1000,
