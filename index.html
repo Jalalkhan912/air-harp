@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Air Harp</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <video id="video" playsinline muted></video>
+  <canvas id="canvas"></canvas>
+
+  <div id="overlay">
+    <h1>Air Harp</h1>
+    <p>Pinch with both hands to draw a string, sweep your index finger across it to pluck, hold an open palm over it to erase.</p>
+    <button id="start" type="button">Click to start</button>
+    <p id="error" role="alert"></p>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
