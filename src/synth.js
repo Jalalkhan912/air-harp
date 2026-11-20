@@ -31,6 +31,17 @@ export function karplusStrong(freq, sampleRate, {
 // Browser only: plays cached Karplus–Strong buffers through a per-pluck gain.
 export function createSynth(ctx) {
   const cache = new Map();
+  // Every voice goes through one master gain and a compressor, so sweeping across several
+  // strings at once (each buffer peaks at 0.9) can't clip the output.
+  const master = ctx.createGain();
+  master.gain.value = 0.5;
+  const limiter = ctx.createDynamicsCompressor();
+  limiter.threshold.value = -12;
+  limiter.knee.value = 6;
+  limiter.ratio.value = 12;
+  limiter.attack.value = 0.003;
+  limiter.release.value = 0.25;
+  master.connect(limiter).connect(ctx.destination);
   function bufferFor(freq) {
     const key = freq.toFixed(3);
     let buf = cache.get(key);
@@ -48,7 +59,7 @@ export function createSynth(ctx) {
       src.buffer = bufferFor(freq);
       const gain = ctx.createGain();
       gain.gain.value = velocity;
-      src.connect(gain).connect(ctx.destination);
+      src.connect(gain).connect(master);
       src.start();
     },
   };

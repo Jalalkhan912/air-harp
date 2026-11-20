@@ -73,3 +73,45 @@ test('deterministic for the same seeded random', () => {
   const b = karplusStrong(330, SR, { random: lcg(7) });
   assert.deepEqual(a, b);
 });
+
+import { createSynth } from '../src/synth.js';
+
+// Minimal stand-in for an AudioContext that records how nodes are wired.
+function fakeAudioContext() {
+  const nodes = [];
+  const node = (kind, extra = {}) => {
+    const n = { kind, out: [], connect(d) { this.out.push(d); return d; }, ...extra };
+    nodes.push(n);
+    return n;
+  };
+  const param = (value) => ({ value, setValueAtTime() {} });
+  return {
+    nodes,
+    sampleRate: 48000,
+    currentTime: 0,
+    state: 'running',
+    destination: node('destination'),
+    createBuffer: (ch, len, sr) => ({ len, sr, copyToChannel() {} }),
+    createBufferSource: () => node('source', { start() {} }),
+    createGain: () => node('gain', { gain: param(1) }),
+    createDynamicsCompressor: () => node('compressor', {
+      threshold: param(-24), knee: param(30), ratio: param(12), attack: param(0.003), release: param(0.25),
+    }),
+  };
+}
+
+test('voices share a master gain and compressor so chords cannot clip (review)', () => {
+  const ctx = fakeAudioContext();
+  const synth = createSynth(ctx);
+  synth.pluck(220, 1);
+  synth.pluck(330, 1);
+  const voices = ctx.nodes.filter((n) => n.kind === 'source').map((s) => s.out[0]);
+  assert.equal(voices.length, 2);
+  const masters = new Set(voices.map((g) => g.out[0]));
+  assert.equal(masters.size, 1, 'one shared master bus');
+  const [master] = masters;
+  assert.equal(master.kind, 'gain');
+  assert.ok(master.gain.value < 1, 'master gain leaves headroom');
+  assert.equal(master.out[0].kind, 'compressor');
+  assert.equal(master.out[0].out[0], ctx.destination);
+});
