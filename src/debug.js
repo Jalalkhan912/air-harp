@@ -11,14 +11,17 @@ export function createDebug(preEl) {
 
   let overlayOn = false;
   let recording = null; // Frame[] while recording
+  let recordedStrings = []; // strings on screen when recording started
+  let latestStrings = [];
   let fps = 0;
   let lastT = null;
 
-  function download(frames) {
+  function download(frames, strings) {
     const first = frames[0];
     const data = {
       width: first?.width ?? window.innerWidth,
       height: first?.height ?? window.innerHeight,
+      strings,
       frames,
     };
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -39,6 +42,7 @@ export function createDebug(preEl) {
         fps = fps ? fps * 0.9 + inst * 0.1 : inst;
       }
       lastT = frame.t;
+      latestStrings = strings;
       if (recording) recording.push(frame);
       if (!overlayOn) return;
       const lines = [
@@ -62,9 +66,10 @@ export function createDebug(preEl) {
         const frames = recording;
         recording = null;
         rec.hidden = true;
-        download(frames);
+        download(frames, recordedStrings);
       } else {
         recording = [];
+        recordedStrings = latestStrings.map(({ id, a, b, createdAt }) => ({ id, a, b, createdAt }));
         rec.hidden = false;
       }
     },

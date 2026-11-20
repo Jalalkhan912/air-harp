@@ -9,9 +9,11 @@ import { createString } from '../src/strings.js';
 
 // Returns every gesture event, each tagged with the frame time `t`. Created strings are kept
 // in a local array (and deleted ones removed) so plucks and deletes behave as they did live.
+// `recording.strings` (optional) holds the strings on screen when recording started.
 export function runRecording(recording, cfg = CONFIG) {
   const engine = createGestureEngine(cfg);
-  let strings = [];
+  let strings = (recording.strings ?? []).map((s) => ({ ...s }));
+  let nextId = strings.reduce((m, s) => Math.max(m, s.id), 0) + 1;
   const out = [];
   for (const frame of recording.frames) {
     for (const e of engine.update(frame, strings)) {
@@ -19,7 +21,7 @@ export function runRecording(recording, cfg = CONFIG) {
       if (e.type === 'create') {
         const w = frame.width ?? recording.width;
         const h = frame.height ?? recording.height;
-        strings.push(createString(e.a, e.b, frame.t, Math.hypot(w, h), cfg));
+        strings.push({ ...createString(e.a, e.b, frame.t, Math.hypot(w, h), cfg), id: nextId++ });
       } else if (e.type === 'delete') {
         strings = strings.filter((s) => s.id !== e.id);
       }

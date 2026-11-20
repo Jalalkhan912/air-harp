@@ -48,3 +48,27 @@ test('replay CLI prints one line per event', () => {
   assert.equal(out.length, runRecording(drawThenPluck()).length);
   assert.match(out.at(-1), /^\d+ms pluck id=\d+ v=\d\.\d\d$/);
 });
+
+test('replay starts from the strings that existed when recording began (review)', () => {
+  // A string drawn before R was pressed, then a sweep across it.
+  const recording = {
+    width: 1280,
+    height: 720,
+    strings: [{ id: 42, a: P(300, 100), b: P(300, 500), createdAt: -5000 }],
+    frames: [
+      { t: 0, width: 1280, height: 720, hands: [R('point', P(250, 300))] },
+      { t: 33, width: 1280, height: 720, hands: [R('point', P(350, 300))] },
+    ],
+  };
+  const plucks = runRecording(recording).filter((e) => e.type === 'pluck');
+  assert.deepEqual(plucks.map((e) => e.id), [42]);
+});
+
+test('strings created during replay never reuse a recorded id', () => {
+  const rec = drawThenPluck();
+  rec.strings = [{ id: 1, a: P(900, 100), b: P(900, 500), createdAt: -5000 }];
+  const created = runRecording(rec).find((e) => e.type === 'create');
+  assert.ok(created);
+  const plucks = runRecording(rec).filter((e) => e.type === 'pluck');
+  assert.ok(plucks.length >= 1 && plucks.every((e) => e.id !== 1), JSON.stringify(plucks));
+});
