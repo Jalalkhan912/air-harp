@@ -63,3 +63,50 @@ test('smoothHands blends matching labels and passes new labels through', () => {
   assert.equal(smoothHands(null, [mk('Right', 10)])[0].landmarks[0].x, 10);
   assert.equal(CONFIG.SMOOTHING, 0.5);
 });
+
+import { stabilizeLabels } from '../src/hands.js';
+
+const at = (label, x) => makeHand({ label, pose: 'point', at: { x, y: 300 } });
+
+test('stabilizeLabels undoes a one-frame label swap', () => {
+  const prev = [at('Left', 200), at('Right', 600)];
+  const cur = stabilizeLabels(prev, [at('Right', 205), at('Left', 598)]);
+  const byLabel = Object.fromEntries(cur.map((h) => [h.label, h.landmarks[8].x]));
+  assert.deepEqual(byLabel, { Left: 205, Right: 598 });
+});
+
+test('stabilizeLabels separates colliding labels by nearest previous hand', () => {
+  const prev = [at('Left', 200), at('Right', 600)];
+  const cur = stabilizeLabels(prev, [at('Left', 590), at('Left', 210)]);
+  const byLabel = Object.fromEntries(cur.map((h) => [h.label, h.landmarks[8].x]));
+  assert.deepEqual(byLabel, { Left: 210, Right: 590 });
+});
+
+test('stabilizeLabels with no history splits colliding labels the MediaPipe way', () => {
+  // MediaPipe expects mirrored input; the raw camera frame isn't, so the hand on the left of
+  // the (mirrored) screen comes back as 'Right'.
+  const cur = stabilizeLabels(null, [at('Left', 200), at('Left', 600)]);
+  const byLabel = Object.fromEntries(cur.map((h) => [h.label, h.landmarks[8].x]));
+  assert.deepEqual(byLabel, { Right: 200, Left: 600 });
+});
+
+test('a one-frame label swap does not pluck (review)', async () => {
+  const { createGestureEngine } = await import('../src/gestures.js');
+  const g = createGestureEngine();
+  const strings = [{ id: 1, a: { x: 400, y: 0 }, b: { x: 400, y: 700 }, createdAt: -1e4 }];
+  let prev = null;
+  let plucks = 0;
+  // Smoothing a swapped hand toward the other one's old position would carry it across x=400.
+  const frames = [
+    [at('Left', 250), at('Right', 650)],
+    [at('Left', 250), at('Right', 650)],
+    [at('Right', 250), at('Left', 650)], // tracker swaps labels for one frame
+    [at('Left', 250), at('Right', 650)],
+  ];
+  frames.forEach((raw, i) => {
+    const hands = smoothHands(prev, stabilizeLabels(prev, raw), 0.5);
+    prev = hands;
+    plucks += g.update({ t: i * 33, width: 1280, height: 720, hands }, strings).filter((e) => e.type === 'pluck').length;
+  });
+  assert.equal(plucks, 0);
+});

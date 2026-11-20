@@ -1,6 +1,6 @@
 // MediaPipe HandLandmarker wrapper. Browser only.
 // Returns frames in mirrored window pixels (matching the CSS-mirrored, object-fit: cover video).
-import { smoothHands } from './hands.js';
+import { smoothHands, stabilizeLabels } from './hands.js';
 import { CONFIG } from './config.js';
 
 const MP_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
@@ -43,13 +43,7 @@ export async function createTracker(video) {
         label: handedness[i]?.[0]?.categoryName ?? (i === 0 ? 'Right' : 'Left'),
         landmarks: lms.map((p) => ({ x: ox + (1 - p.x) * dw, y: oy + p.y * dh })),
       }));
-      // Labels are hand identities downstream. If both hands get the same label, relabel
-      // by screen side (mirrored view: your left hand appears on the left).
-      if (hands.length === 2 && hands[0].label === hands[1].label) {
-        const [l, r] = hands[0].landmarks[0].x <= hands[1].landmarks[0].x ? [0, 1] : [1, 0];
-        hands[l] = { ...hands[l], label: 'Left' };
-        hands[r] = { ...hands[r], label: 'Right' };
-      }
+      hands = stabilizeLabels(prevHands, hands);
       hands = smoothHands(prevHands, hands, CONFIG.SMOOTHING);
       prevHands = hands;
       return { t: now, width, height, hands };

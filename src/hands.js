@@ -72,3 +72,26 @@ export function smoothHands(prev, cur, alpha = CONFIG.SMOOTHING) {
     };
   });
 }
+
+// Labels are hand identities downstream (pinch state, fingertip history, smoothing). MediaPipe's
+// handedness can swap or collide for a frame, so with two hands keep whichever labelling keeps
+// each wrist nearest its previous position. Without usable history, colliding labels are split
+// by screen side the way MediaPipe labels an unmirrored camera frame: the hand on the left of
+// the mirrored screen is 'Right'.
+export function stabilizeLabels(prev, cur) {
+  if (cur.length !== 2) return cur;
+  const relabel = (hand, label) => (hand.label === label ? hand : { ...hand, label });
+  const [h0, h1] = cur;
+  if (prev?.length === 2 && prev[0].label !== prev[1].label) {
+    const w = (h) => h.landmarks[0];
+    const [p0, p1] = prev;
+    const keep = dist(w(h0), w(p0)) + dist(w(h1), w(p1));
+    const swap = dist(w(h0), w(p1)) + dist(w(h1), w(p0));
+    return keep <= swap
+      ? [relabel(h0, p0.label), relabel(h1, p1.label)]
+      : [relabel(h0, p1.label), relabel(h1, p0.label)];
+  }
+  if (h0.label !== h1.label) return cur;
+  const h0Left = h0.landmarks[0].x <= h1.landmarks[0].x;
+  return [relabel(h0, h0Left ? 'Right' : 'Left'), relabel(h1, h0Left ? 'Left' : 'Right')];
+}
